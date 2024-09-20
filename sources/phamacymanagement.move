@@ -93,12 +93,13 @@ module phamacymanagement::pharmacy_management {
             orders: table::new<ID, Order>(ctx),
             inventory: table::new<ID, InventoryItem>(ctx),
         };
-        transfer::share_object(pharmacy);
+        transfer::public_share_object(pharmacy);  // Properly share the object
 
-        PharmacyCap {
+        let cap = PharmacyCap {
             id: object::new(ctx),
             for: inner,
-        }
+        };
+        transfer::transfer(cap, tx_context::sender(ctx))  // Transfer the capability to the sender
     }
 
     /// Deposits funds into the pharmacy's balance.
@@ -125,7 +126,7 @@ module phamacymanagement::pharmacy_management {
         ctx: &mut TxContext
     ) : Employee {
         let id = object::new(ctx);
-        Employee {
+        let employee = Employee {
             id,
             name,
             role,
@@ -133,7 +134,8 @@ module phamacymanagement::pharmacy_management {
             balance: balance::zero<SUI>(),
             department,
             hireDate,
-        }
+        };
+        transfer::transfer(employee, tx_context::sender(ctx))  // Transfer the employee object to the sender
     }
 
     /// Updates information about an existing employee.
@@ -183,14 +185,15 @@ module phamacymanagement::pharmacy_management {
         ctx: &mut TxContext
     ) : Customer {
         let id = object::new(ctx);
-        Customer {
+        let customer = Customer {
             id,
             name,
             age,
             address,
             principal: tx_context::sender(ctx),
             prescriptionHistory,
-        }
+        };
+        transfer::transfer(customer, tx_context::sender(ctx))  // Transfer the customer object to the sender
     }
 
     /// Updates information about an existing customer.
@@ -317,21 +320,9 @@ module phamacymanagement::pharmacy_management {
         pharmacy: &mut Pharmacy,
         amount: u64,
         ctx: &mut TxContext
-    ) : Coin<SUI> {
+    ) {
         assert!(balance::value(&pharmacy.balance) >= amount, EInsufficientBalance);
         let payment = coin::take(&mut pharmacy.balance, amount, ctx);
-        payment
+        coin::destroy(payment);
     }
-
-    /// Deletes a customer from the pharmacy's records.
-    ///
-    /// Removes the customer from the pharmacy's customer table and deletes associated data.
-    public fun delete_customer(
-        pharmacy: &mut Pharmacy,
-        customer_id: ID,
-    ) {
-        let customer = table::remove(&mut pharmacy.customers, customer_id);
-        let Customer { id, name: _, age: _, address: _, principal: _, prescriptionHistory: _ } = customer;
-        object::delete(id);
-    } 
 }
