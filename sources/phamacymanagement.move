@@ -1,6 +1,5 @@
 #[allow(unused_const)]
 module phamacymanagement::pharmacy_management {
-    use sui::transfer;
     use sui::sui::SUI;
     use std::string::String;
     use sui::coin::{Self, Coin};
@@ -75,32 +74,34 @@ module phamacymanagement::pharmacy_management {
     /// Adds information about a new pharmacy.
     ///
     /// Returns a `PharmacyCap` object representing the capability to manage the pharmacy.
-    public fun add_pharmacy_info(
-        name: String,
-        location: String,
-        ctx: &mut TxContext
-    ) : PharmacyCap {
-        let id = object::new(ctx);
-        let inner = object::uid_to_inner(&id);
-        let pharmacy = Pharmacy {
-            id,
-            name,
-            location,
-            balance: balance::zero<SUI>(),
-            principal: tx_context::sender(ctx),
-            employees: table::new<ID, Employee>(ctx),
-            customers: table::new<ID, Customer>(ctx),
-            orders: table::new<ID, Order>(ctx),
-            inventory: table::new<ID, InventoryItem>(ctx),
-        };
-        transfer::public_share_object(pharmacy);  // Properly share the object
+public fun add_pharmacy_info(
+    name: String,
+    location: String,
+    ctx: &mut TxContext
+) : (Pharmacy, PharmacyCap) {
+    let id = object::new(ctx);
+    let pharmacy = Pharmacy {
+        id,
+        name,
+        location,
+        balance: balance::zero<SUI>(),
+        principal: tx_context::sender(ctx),
+        employees: table::new<ID, Employee>(ctx),
+        customers: table::new<ID, Customer>(ctx),
+        orders: table::new<ID, Order>(ctx),
+        inventory: table::new<ID, InventoryItem>(ctx),
+    };
 
-        let cap = PharmacyCap {
-            id: object::new(ctx),
-            for: inner,
-        };
-        transfer::transfer(cap, tx_context::sender(ctx))  // Transfer the capability to the sender
-    }
+
+    let cap = PharmacyCap {
+        id: object::new(ctx),
+        for: object::uid_to_inner(&id),
+    };
+
+    // We now directly return the pharmacy and the capability object to the caller
+    (pharmacy, cap)
+}
+
 
     /// Deposits funds into the pharmacy's balance.
     ///
@@ -119,24 +120,27 @@ module phamacymanagement::pharmacy_management {
     ///
     /// Returns an `Employee` object representing the newly added employee.
     public fun add_employee_info(
-        name: String,
-        role: String,
-        department: String,
-        hireDate: String,
-        ctx: &mut TxContext
-    ) : Employee {
-        let id = object::new(ctx);
-        let employee = Employee {
-            id,
-            name,
-            role,
-            principal: tx_context::sender(ctx),
-            balance: balance::zero<SUI>(),
-            department,
-            hireDate,
-        };
-        transfer::transfer(employee, tx_context::sender(ctx))  // Transfer the employee object to the sender
-    }
+    name: String,
+    role: String,
+    department: String,
+    hireDate: String,
+    ctx: &mut TxContext
+) : Employee {
+    let id = object::new(ctx);
+    let employee = Employee {
+        id,
+        name,
+        role,
+        principal: tx_context::sender(ctx),
+        balance: balance::zero<SUI>(),
+        department,
+        hireDate,
+    };
+
+    // Directly return the employee object without using transfer::transfer
+    employee
+}
+
 
     /// Updates information about an existing employee.
     ///
@@ -178,23 +182,26 @@ module phamacymanagement::pharmacy_management {
     ///
     /// Returns a `Customer` object representing the newly added customer.
     public fun add_customer_info(
-        name: String,
-        age: u64,
-        address: String,
-        prescriptionHistory: String,
-        ctx: &mut TxContext
-    ) : Customer {
-        let id = object::new(ctx);
-        let customer = Customer {
-            id,
-            name,
-            age,
-            address,
-            principal: tx_context::sender(ctx),
-            prescriptionHistory,
-        };
-        transfer::transfer(customer, tx_context::sender(ctx))  // Transfer the customer object to the sender
-    }
+    name: String,
+    age: u64,
+    address: String,
+    prescriptionHistory: String,
+    ctx: &mut TxContext
+) : Customer {
+    let id = object::new(ctx);
+    let customer = Customer {
+        id,
+        name,
+        age,
+        address,
+        principal: tx_context::sender(ctx),
+        prescriptionHistory,
+    };
+
+    // Directly return the customer object to the caller
+    customer
+}
+
 
     /// Updates information about an existing customer.
     ///
