@@ -7,6 +7,7 @@ module phamacymanagement::pharmacy_management {
     use sui::balance::{Self, Balance};
     use sui::tx_context::{Self, TxContext};
     use sui::table::{Self, Table};
+    
 
     // Errors
     const EInsufficientBalance: u64 = 1;
@@ -74,34 +75,33 @@ module phamacymanagement::pharmacy_management {
     /// Adds information about a new pharmacy.
     ///
     /// Returns a `PharmacyCap` object representing the capability to manage the pharmacy.
-public fun add_pharmacy_info(
-    name: String,
-    location: String,
-    ctx: &mut TxContext
-) : (Pharmacy, PharmacyCap) {
-    let id = object::new(ctx);
-    let pharmacy = Pharmacy {
-        id,
-        name,
-        location,
-        balance: balance::zero<SUI>(),
-        principal: tx_context::sender(ctx),
-        employees: table::new<ID, Employee>(ctx),
-        customers: table::new<ID, Customer>(ctx),
-        orders: table::new<ID, Order>(ctx),
-        inventory: table::new<ID, InventoryItem>(ctx),
-    };
+    public fun add_pharmacy_info(
+        name: String,
+        location: String,
+        ctx: &mut TxContext
+    ) : (Pharmacy, PharmacyCap) {
+        let id = object::new(ctx);
+        let pharmacy = Pharmacy {
+            id,
+            name,
+            location,
+            balance: balance::zero<SUI>(),
+            principal: tx_context::sender(ctx),
+            employees: table::new<ID, Employee>(ctx),
+            customers: table::new<ID, Customer>(ctx),
+            orders: table::new<ID, Order>(ctx),
+            inventory: table::new<ID, InventoryItem>(ctx),
+        };
 
 
-    let cap = PharmacyCap {
-        id: object::new(ctx),
-        for: object::uid_to_inner(&id),
-    };
+        let cap = PharmacyCap {
+            id: object::new(ctx),
+            for: object::uid_to_inner(&id),
+        };
 
-    // We now directly return the pharmacy and the capability object to the caller
-    (pharmacy, cap)
-}
-
+        // We now directly return the pharmacy and the capability object to the caller
+        (pharmacy, cap)
+    }
 
     /// Deposits funds into the pharmacy's balance.
     ///
@@ -120,27 +120,26 @@ public fun add_pharmacy_info(
     ///
     /// Returns an `Employee` object representing the newly added employee.
     public fun add_employee_info(
-    name: String,
-    role: String,
-    department: String,
-    hireDate: String,
-    ctx: &mut TxContext
-) : Employee {
-    let id = object::new(ctx);
-    let employee = Employee {
-        id,
-        name,
-        role,
-        principal: tx_context::sender(ctx),
-        balance: balance::zero<SUI>(),
-        department,
-        hireDate,
-    };
+        name: String,
+        role: String,
+        department: String,
+        hireDate: String,
+        ctx: &mut TxContext
+    ) : Employee {
+        let id = object::new(ctx);
+        let employee = Employee {
+            id,
+            name,
+            role,
+            principal: tx_context::sender(ctx),
+            balance: balance::zero<SUI>(),
+            department,
+            hireDate,
+        };
 
-    // Directly return the employee object without using transfer::transfer
-    employee
-}
-
+        // Directly return the employee object without using transfer::transfer
+        employee
+    }
 
     /// Updates information about an existing employee.
     ///
@@ -182,26 +181,25 @@ public fun add_pharmacy_info(
     ///
     /// Returns a `Customer` object representing the newly added customer.
     public fun add_customer_info(
-    name: String,
-    age: u64,
-    address: String,
-    prescriptionHistory: String,
-    ctx: &mut TxContext
-) : Customer {
-    let id = object::new(ctx);
-    let customer = Customer {
-        id,
-        name,
-        age,
-        address,
-        principal: tx_context::sender(ctx),
-        prescriptionHistory,
-    };
+        name: String,
+        age: u64,
+        address: String,
+        prescriptionHistory: String,
+        ctx: &mut TxContext
+    ) : Customer {
+        let id = object::new(ctx);
+        let customer = Customer {
+            id,
+            name,
+            age,
+            address,
+            principal: tx_context::sender(ctx),
+            prescriptionHistory,
+        };
 
-    // Directly return the customer object to the caller
-    customer
-}
-
+        // Directly return the customer object to the caller
+        customer
+    }
 
     /// Updates information about an existing customer.
     ///
@@ -318,18 +316,37 @@ public fun add_pharmacy_info(
         object::delete(id);
     }
 
-    // Handle pharmacy expenses
+    // Pay pharmacy expenses
 
-    /// Pays an expense from the pharmacy's balance.
+    /// Function to handle pharmacy expenses.
     ///
-    /// Takes `amount` and transfers it out from the pharmacy's balance.
+    /// Deducts the `amount` from the pharmacy's balance and transfers it to the `recipient`.
     public fun pay_expense(
         pharmacy: &mut Pharmacy,
         amount: u64,
+        recipient: address,
         ctx: &mut TxContext
     ) {
+        // Ensure the pharmacy has enough balance to cover the expense
         assert!(balance::value(&pharmacy.balance) >= amount, EInsufficientBalance);
-        let payment = coin::take(&mut pharmacy.balance, amount, ctx);
-        coin::destroy(payment);
+
+        // Deduct the amount from the pharmacy's balance
+        let expense = coin::take(&mut pharmacy.balance, amount, ctx);
+
+        // Transfer the deducted amount to the recipient
+        coin::transfer(expense, recipient);
     }
+
+    // Handle pharmacy operational costs by burning tokens
+    public fun handle_operational_cost(
+        pharmacy: &mut Pharmacy,
+        ctx: &mut TxContext
+    ) {
+        // Suppose the operational cost is 1000 SUI, and you want to burn it
+        let burn_amount: u64 = 1000;
+
+        // Call the pay_expense function to burn the amount
+        pay_expense(pharmacy, burn_amount, @0x1, ctx);  // Burns 1000 SUI tokens by transferring to address @0x1
+    }
+
 }
